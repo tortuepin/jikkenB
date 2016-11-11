@@ -28,6 +28,8 @@ void printWordInfo(wordinfo info);
 int fgetline(char *buf, size_t size, FILE *stream);
 /* 最長一致 */
 int longestMatch(char *buf, int len, int dicsize, wordinfo* info[]);
+/* バイト数チェック */
+int checkBite(unsigned char c);
 
 int main(void){
     wordinfo *info[LINE];
@@ -139,25 +141,37 @@ int fgetline(char *buf, size_t size, FILE *stream){
 int longestMatch(char *buf, int len, int dicsize, wordinfo* info[]){
     char *p = buf;
     char w[1000];
+    unsigned char c;
     int i=0;
     int hit, k;
     while(i < len){
         for(k=len; i<k; k--){
             strncpy(w, p+i, k-i);
             w[k-i] = '\0';
-            fprintf(stderr, "%s\n", w);
             hit = lookup(info, w, dicsize);
             if(hit != -1){
                 break;
+            }
+            c = w[k-i-1];
+            if(checkBite(c) == 2){
+                k--;
             }
         }
         //見つかったらbufに残りを入れる
         //見つからなかったら一つ進める
         if(hit != -1){
-            printf("%s\n\n", w);
+            printf("%s\n", w);
             i = k;
         }else{
             i = i+1;
         }
     }
 }
+
+int checkBite(unsigned char c){
+    if((int)c >= 128){
+        return 2;
+    }
+    return 1;
+}
+
