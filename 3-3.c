@@ -26,9 +26,10 @@ int binaryLookup(wordinfo* info[], char* word, int size);
 /* 情報を表示 */ 
 void printWordInfo(wordinfo info);
 int fgetline(char *buf, size_t size, FILE *stream);
-/* 前方一致 */
-int forwardMatch(wordinfo* info[], char* word, int num);
-
+/* 最長一致 */
+int longestMatch(char *buf, int len, int dicsize, wordinfo* info[]);
+/* バイト数チェック */
+int checkBite(unsigned char c);
 
 int main(void){
     wordinfo *info[LINE];
@@ -47,26 +48,8 @@ int main(void){
 
     while(fgetline(buf, sizeof(buf), stdin) != -1){
         len = strlen(buf);
-        while(len > 0){
-            for(i=0; i < len; i++){
-                strncpy(euc, buf, len-i);
-                euc[len-i] = '\0';
-                hit = binaryLookup(info, euc, dicsize);
-                if(hit != -1){
-                    printWordInfo(*info[hit]);
-                    break;
-                }
-            }
-            //見つかったらbufに残りを入れる
-            //見つからなかったら一つ進める
-            if(i < len){
-                strncpy(buf2, buf+len-i, i+1);
-            }else{
-                strncpy(buf2, buf+1, len-1);
-            }
-            strcpy(buf, buf2);
-            len = strlen(buf);
-        }
+        longestMatch(buf, len, dicsize, info);
+        fprintf(stderr, "ok\n");
     }
     freeDic(info, dicsize);
 }
@@ -98,7 +81,7 @@ int readDic(char* filename, wordinfo* info[]){
 
 void freeDic(wordinfo* info[], int size){
     int i;
-    for(i=0; i<size; i++){
+    for(i=0; i<size-1; i++){
         free(info[i]);
     }
 }
@@ -155,9 +138,40 @@ int fgetline(char *buf, size_t size, FILE *stream){
     }
 }
 
+int longestMatch(char *buf, int len, int dicsize, wordinfo* info[]){
+    char *p = buf;
+    char w[1000];
+    unsigned char c;
+    int i=0;
+    int hit, k;
+    while(i < len){
+        for(k=len; i<k; k--){
+            strncpy(w, p+i, k-i);
+            w[k-i] = '\0';
+            hit = lookup(info, w, dicsize);
+            if(hit != -1){
+                break;
+            }
+            c = w[k-i-1];
+            if(checkBite(c) == 2){
+                k--;
+            }
+        }
+        //見つかったらbufに残りを入れる
+        //見つからなかったら一つ進める
+        if(hit != -1){
+            printf("%s\n", w);
+            i = k;
+        }else{
+            i = i+1;
+        }
+    }
+}
 
-
-
-int forwardMatch(wordinfo* info[], char* word, int num){
+int checkBite(unsigned char c){
+    if((int)c >= 128){
+        return 2;
+    }
+    return 1;
 }
 
