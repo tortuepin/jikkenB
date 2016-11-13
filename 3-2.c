@@ -23,16 +23,18 @@ void freeDic(wordinfo* info[], int size);
 int lookup(wordinfo* info[], char* word, int size);
 /* wordを検索 二分*/
 int binaryLookup(wordinfo* info[], char* word, int size);
-/* 二分探索 */
-int binarySearch(wordinfo* info[], char* word, int head, int tail);
 /* 情報を表示 */ 
 void printWordInfo(wordinfo info);
-
+int fgetline(char *buf, size_t size, FILE *stream);
+/* 前方一致 */
+int forwardMatch(wordinfo* info[], char* word, int num);
 
 
 int main(void){
     wordinfo *info[LINE];
-    char euc[10];
+    char buf[10000];
+    char buf2[10000];
+    char euc[10000];
     int i, len, hit;
 
 
@@ -41,22 +43,31 @@ int main(void){
         printf("cannot read dic");
         return -1;
     }
+    
 
-    fgets(euc, 10, stdin);
-    len=strlen(euc);
-    if(euc[len-1] == '\n'){
-        euc[len-1] = '\0';
+    while(fgetline(buf, sizeof(buf), stdin) != -1){
+        len = strlen(buf);
+        while(len > 0){
+            for(i=0; i < len; i++){
+                strncpy(euc, buf, len-i);
+                euc[len-i] = '\0';
+                hit = binaryLookup(info, euc, dicsize);
+                if(hit != -1){
+                    printWordInfo(*info[hit]);
+                    break;
+                }
+            }
+            //見つかったらbufに残りを入れる
+            //見つからなかったら一つ進める
+            if(i < len){
+                strncpy(buf2, buf+len-i, i+1);
+            }else{
+                strncpy(buf2, buf+1, len-1);
+            }
+            strcpy(buf, buf2);
+            len = strlen(buf);
+        }
     }
-    hit = binaryLookup(info, euc, dicsize);
-
-
-    if(hit > 0){
-        printWordInfo(*info[hit]);
-    }else{
-        printf("mitsukaranai");
-        return -1;
-    }
-
     freeDic(info, dicsize);
 }
 
@@ -112,7 +123,6 @@ int binaryLookup(wordinfo* info[], char* word, int size){
         result = strcmp(info[i]->word, word);
 
         if(head > tail){
-            printf("head > tail");
             return -1;
         }
         if(result == 0){
@@ -129,24 +139,25 @@ int binaryLookup(wordinfo* info[], char* word, int size){
 }
 
 void printWordInfo(wordinfo info){
-    printf("%s\t%s\t%s\t%s\t%f", info.word, info.yomi, info.kihon, info.hinshi, info.cost);
+    printf("%s\t%s\t%s\t%s\t%f\n", info.word, info.yomi, info.kihon, info.hinshi, info.cost);
 }
 
-int binarySearch(wordinfo* info[], char* word, int head, int tail){
-    int center = head+tail/2;
-    int result = strcmp(info[center]->word, word);
-    
-    if(result > 0){
-        if(center+1 == tail)
-            return -1;
-        return binarySearch(info, word, center+1, tail);
-    }else if(result < 0){
-        if(center-1 == head){
-            return -1;
-        }
-        return binarySearch(info, word, head, center-1);
-    }else{
-        return center;
+int fgetline(char *buf, size_t size, FILE *stream){
+    int len;
+    if(fgets(buf, size, stream) == NULL) return -1;
+    len = strlen(buf);
+    if(len == 0) return len;
+    if(buf[len-1] == '\n'){
+        buf[len-1] = '\0';
+        return len-1;
+    } else {
+        return len;
     }
-
 }
+
+
+
+
+int forwardMatch(wordinfo* info[], char* word, int num){
+}
+
