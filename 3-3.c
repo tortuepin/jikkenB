@@ -27,19 +27,24 @@ int binaryLookup(wordinfo* info[], char* word, int size);
 void printWordInfo(wordinfo info);
 int fgetline(char *buf, size_t size, FILE *stream);
 /* 最長一致 */
-int longestMatch(char *buf, int len, int dicsize, wordinfo* info[]);
+int longestMatch(char *buf, int len, int dicsize, wordinfo* info[], int optnum);
 /* バイト数チェック */
 int checkBite(unsigned char c);
+/* オプションチェック */
+int checkOption(char* opt);
 
-int main(void){
+int main(int argc, char* argv[]){
     wordinfo *info[LINE];
     char buf[10000];
-    char buf2[10000];
-    char euc[10000];
-    int i, len, hit;
-
-
+    int len, hit, optnum;
     int dicsize;
+
+    if(argc < 1){
+        return -1;
+    }else{
+        optnum = checkOption(argv[1]);
+    }
+
     if((dicsize=readDic(FILENAME, info)) < 0){
         printf("cannot read dic");
         return -1;
@@ -48,8 +53,13 @@ int main(void){
 
     while(fgetline(buf, sizeof(buf), stdin) != -1){
         len = strlen(buf);
-        longestMatch(buf, len, dicsize, info);
+        hit = longestMatch(buf, len, dicsize, info, optnum);
+        if (hit != -1){
+            printWordInfo(*info[hit]);
+        }
+
     }
+    
     freeDic(info, dicsize);
 }
 
@@ -137,17 +147,17 @@ int fgetline(char *buf, size_t size, FILE *stream){
     }
 }
 
-int longestMatch(char *buf, int len, int dicsize, wordinfo* info[]){
+int longestMatch(char *buf, int len, int dicsize, wordinfo* info[], int optnum){
     char *p = buf;
     char w[1000];
     unsigned char c;
     int i=0;
-    int hit, k;
+    int hit, k, hitnum=0;
     while(i < len){
         for(k=len; i<k; k--){
             strncpy(w, p+i, k-i);
             w[k-i] = '\0';
-            hit = binaryLookup(info, w, dicsize);
+            hit = lookup(info, w, dicsize);
             if(hit != -1){
                 break;
             }
@@ -159,12 +169,16 @@ int longestMatch(char *buf, int len, int dicsize, wordinfo* info[]){
         //見つかったらbufに残りを入れる
         //見つからなかったら一つ進める
         if(hit != -1){
-            printf("%s\n", w);
+            hitnum++;
+            if(hitnum == optnum){
+                return hit;
+            }
             i = k;
         }else{
             i = i+1;
         }
     }
+    return -1;
 }
 
 int checkBite(unsigned char c){
@@ -174,3 +188,10 @@ int checkBite(unsigned char c){
     return 1;
 }
 
+
+int checkOption(char* opt){
+    if(opt[0] == '-'){
+        return atoi(&opt[1]);
+    }
+    return -1;
+}
