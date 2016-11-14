@@ -55,10 +55,11 @@ int main(int argc, char* argv[]){
 
     while(fgetline(buf, sizeof(buf), stdin) != -1){
         len = strlen(buf);
-        hit = longestMatch(buf, len, dicsize, info, optnum);
-        if (hit != -1){
-            printWordInfo(*info[hit]);
-        }
+        minCostMatch(buf, len, dicsize, info);
+        //hit = longestMatch(buf, len, dicsize, info, optnum);
+        //if (hit != -1){
+        //    printWordInfo(*info[hit]);
+        //}
 
     }
     
@@ -200,22 +201,75 @@ int checkOption(char* opt){
 
 
 int minCostMatch(char *buf, int len, int dicsize, wordinfo* info[]){
-    int numWords[1000];
-    int startPoint[1000];
-    char lastWords[100][1000];
+    double minCost[1000];
+    int minWordNum[1000];
     char tmpWord[1000];
-    int i;
+    double wordCost[1000][50];
+    int lattice[1000][50];//[文字位置][単語数]
+    int wordLen[1000][50];//lattice[n][i]の単語の長さ
+    int latticeNum[1000];//lattice[n]に何個単語が入ってるか
+    int i, k, hit, j=0;
+    int place[1000];
+    int p=0, kp=0;
+    double tmpCost;
 
     //初期化
-    //iBite目で終わる単語を調べてくる
-    for (i=0; i<len; i++){
-        if(checkOtion(buf[i]) == 1){
+    //ラティスを作る
+    printf("%d ", len);
+    for(i=0; i<len; i++){
+        if(checkBite(buf[i]) == 2){
+            i++;
+        }
+        place[p] = i;
+        j=0;
+        kp=0;
+        for(k=0; k<=i; k++){
+            //kからiまでの単語があるかどうか調べる
+            strncpy(tmpWord, buf+k, i-k+1);
+            tmpWord[i-k+1] = '\0';
+            hit = binaryLookup(info, tmpWord, dicsize);
+            //あったらその辞書番号とコストを保存
+            if(hit != -1){
+                lattice[p][j] = hit;
+                wordCost[p][j] = info[hit]->cost;
+                wordLen[p][j] = p-kp+1;
+                j++;
+            }
+            if(checkBite(buf[i]) == 2){
+                k++;
+            }
+            kp++;
+        }
+        latticeNum[p] = j;
+        p++;
+    }
+    //ここまでで初期化完了
+    //最小を見つける
+    for(i=0; i<=p; i++){
+        minCost[i] = -1;
+        for(k=0; k<latticeNum[i]; k++){
+            tmpCost = wordCost[i][k];
+            if(i-wordLen[i][k]>=0)tmpCost += minCost[i-wordLen[i][k]];
+            if(tmpCost < minCost[i] || minCost[i] < 0){
+                minCost[i] = tmpCost;
+                minWordNum[i] = k;
+            }
         }
     }
+    
+    //バックトラック
+    i = p-1;
+    while(1){
+        printf("i=%d ", i);
+        printf("%d %d ", minWordNum[i], wordLen[i][minWordNum[i]]);
+        printWordInfo(*info[lattice[i][minWordNum[i]]]);
+        i -= wordLen[i][minWordNum[i]];
+        if(i<=0)break;
+    }
+    
+    
 
-
-
-
-
+return -1;
 
 }
+
