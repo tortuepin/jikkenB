@@ -1,6 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include<limits.h>
 
 #define N 256 //一行
 #define INFOLEN N*5
@@ -29,7 +30,7 @@ int fgetline(char *buf, size_t size, FILE *stream);
 /* 最長一致 */
 int longestMatch(char *buf, int len, int dicsize, wordinfo* info[], int optnum);
 /* コスト最小 */
-int minCostMatch(char *buf, int len, int dicsize, wordinfo* info[]);
+void minCostMatch(char *buf, int len, int dicsize, wordinfo* info[]);
 /* バイト数チェック */
 int checkBite(unsigned char c);
 /* オプションチェック */
@@ -200,7 +201,7 @@ int checkOption(char* opt){
 }
 
 
-int minCostMatch(char *buf, int len, int dicsize, wordinfo* info[]){
+void minCostMatch(char *buf, int len, int dicsize, wordinfo* info[]){
     double minCost[1000];
     int minWordNum[1000];
     char tmpWord[1000];
@@ -215,7 +216,7 @@ int minCostMatch(char *buf, int len, int dicsize, wordinfo* info[]){
 
     //初期化
     //ラティスを作る
-    printf("%d ", len);
+    //printf("len = %d ", len);
     for(i=0; i<len; i++){
         if(checkBite(buf[i]) == 2){
             i++;
@@ -234,6 +235,8 @@ int minCostMatch(char *buf, int len, int dicsize, wordinfo* info[]){
                 wordCost[p][j] = info[hit]->cost;
                 wordLen[p][j] = p-kp+1;
                 j++;
+                //printf("lettice %d %d = ", p, j-1);
+                //printWordInfo(*info[hit]);
             }
             if(checkBite(buf[i]) == 2){
                 k++;
@@ -246,7 +249,7 @@ int minCostMatch(char *buf, int len, int dicsize, wordinfo* info[]){
     //ここまでで初期化完了
     //最小を見つける
     for(i=0; i<=p; i++){
-        minCost[i] = -1;
+        minCost[i] = INT_MAX;
         for(k=0; k<latticeNum[i]; k++){
             tmpCost = wordCost[i][k];
             if(i-wordLen[i][k]>=0)tmpCost += minCost[i-wordLen[i][k]];
@@ -260,16 +263,9 @@ int minCostMatch(char *buf, int len, int dicsize, wordinfo* info[]){
     //バックトラック
     i = p-1;
     while(1){
-        printf("i=%d ", i);
-        printf("%d %d ", minWordNum[i], wordLen[i][minWordNum[i]]);
         printWordInfo(*info[lattice[i][minWordNum[i]]]);
         i -= wordLen[i][minWordNum[i]];
-        if(i<=0)break;
+        if(i<0)break;
     }
-    
-    
-
-return -1;
-
 }
 
