@@ -213,6 +213,8 @@ void minCostMatch(char *buf, int len, int dicsize, wordinfo* info[]){
     int place[1000];
     int p=0, kp=0;
     double tmpCost;
+    int revans[1000];
+    int ans[1000];
 
     //初期化
     //ラティスを作る
@@ -262,10 +264,18 @@ void minCostMatch(char *buf, int len, int dicsize, wordinfo* info[]){
     
     //バックトラック
     i = p-1;
+    k = 0;
     while(1){
-        printWordInfo(*info[lattice[i][minWordNum[i]]]);
+        revans[k] = lattice[i][minWordNum[i]];
         i -= wordLen[i][minWordNum[i]];
         if(i<0)break;
+        k++;
     }
+
+    for(i=0; i<=k; i++){
+        ans[i] = revans[k-i];
+        printWordInfo(*info[ans[i]]);
+    }
+
 }
 
