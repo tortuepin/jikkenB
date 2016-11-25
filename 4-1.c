@@ -42,11 +42,8 @@ int main(int argc, char* argv[]){
     int len, hit, optnum;
     int dicsize;
 
-    if(argc < 1){
-        return -1;
-    }else{
-        optnum = checkOption(argv[1]);
-    }
+    int k=0;
+
 
     if((dicsize=readDic(FILENAME, info)) < 0){
         printf("cannot read dic");
@@ -61,6 +58,7 @@ int main(int argc, char* argv[]){
         //if (hit != -1){
         //    printWordInfo(*info[hit]);
         //}
+        k++;
 
     }
     
@@ -231,6 +229,10 @@ void minCostMatch(char *buf, int len, int dicsize, wordinfo* info[]){
             strncpy(tmpWord, buf+k, i-k+1);
             tmpWord[i-k+1] = '\0';
             hit = binaryLookup(info, tmpWord, dicsize);
+
+            //ラティスとか初期化
+            lattice[p][j] = -1;
+            //wordLen[p][j] = 1;
             //あったらその辞書番号とコストを保存
             if(hit != -1){
                 lattice[p][j] = hit;
@@ -240,6 +242,7 @@ void minCostMatch(char *buf, int len, int dicsize, wordinfo* info[]){
                 //printf("lettice %d %d = ", p, j-1);
                 //printWordInfo(*info[hit]);
             }
+
             if(checkBite(buf[i]) == 2){
                 k++;
             }
@@ -267,14 +270,35 @@ void minCostMatch(char *buf, int len, int dicsize, wordinfo* info[]){
     k = 0;
     while(1){
         revans[k] = lattice[i][minWordNum[i]];
+        if(revans[k] >= 0){
+        //    printWordInfo(*info[revans[k]]);
+        //printf("i = %d\n", i);
+        //printf("k = %d\n", k);
+        //printf("revans[k] = %d\n", revans[k]);
+        //printf("len = %d\n", wordLen[i][minWordNum[i]]);
+        //printf("minWordNum[i] = %d\n", minWordNum[i]);
+
+        //printf("lattice[i][0] = %d\n", lattice[i][0]);
+        //printf("lattice[i][1] = %d\n", lattice[i][1]);
+
+        //printf("lattice[i+2][0] = %d\n", lattice[i-1][0]);
+        //printf("lattice[i+2][1] = %d\n", lattice[i-1][0]);
+        
         i -= wordLen[i][minWordNum[i]];
+        }else{
+            i -= 1;
+        }
         if(i<0)break;
         k++;
     }
 
     for(i=0; i<=k; i++){
         ans[i] = revans[k-i];
-        printWordInfo(*info[ans[i]]);
+        if(ans[i] >= 0){
+            printWordInfo(*info[ans[i]]);
+        }else{
+            printf("未定義");
+        }
     }
 
 }
