@@ -1,3 +1,0 @@
-gcc -g -o ../bin/3-1 3-1.c
-../bin/3-1
-head > tailmitsukaranai

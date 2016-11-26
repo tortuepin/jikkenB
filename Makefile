@@ -47,3 +47,9 @@ run4-2: 4-2
 
 run:
 	${BIN}/4-1
+
+tree: tree.c
+	${CC} ${OPTION} -o ${BIN}/tree tree.c
+
+runtree: tree
+	${BIN}/tree
