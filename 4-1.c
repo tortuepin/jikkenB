@@ -54,10 +54,6 @@ int main(int argc, char* argv[]){
     while(fgetline(buf, sizeof(buf), stdin) != -1){
         len = strlen(buf);
         minCostMatch(buf, len, dicsize, info);
-        //hit = longestMatch(buf, len, dicsize, info, optnum);
-        //if (hit != -1){
-        //    printWordInfo(*info[hit]);
-        //}
         k++;
 
     }
@@ -133,7 +129,7 @@ int binaryLookup(wordinfo* info[], char* word, int size){
 }
 
 void printWordInfo(wordinfo info){
-    printf("%s\t%s\t%s\t%s\t%f\n", info.word, info.yomi, info.kihon, info.hinshi, info.cost);
+    printf("%s\t%s\t%s\t%s\t\n", info.word, info.yomi, info.kihon, info.hinshi);
 }
 
 int fgetline(char *buf, size_t size, FILE *stream){
@@ -297,7 +293,7 @@ void minCostMatch(char *buf, int len, int dicsize, wordinfo* info[]){
         if(ans[i] >= 0){
             printWordInfo(*info[ans[i]]);
         }else{
-            printf("未定義");
+            printf("undefined\n");
         }
     }
 
