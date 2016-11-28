@@ -49,7 +49,7 @@ run:
 	${BIN}/4-1
 
 tree: tree.c
-	${CC} ${OPTION} -o ${BIN}/tree tree.c
+	${CC} -o ${BIN}/tree -g tree.c
 
 runtree: tree
 	${BIN}/tree
