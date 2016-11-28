@@ -214,12 +214,13 @@ int checkBite(unsigned char c){ // {{{
 } //}}}
 
 // 辞書ファイルから重複がないようにn文字目をとってくる
+// ついでにlouds作る
 // 必ずfreeExtractedすること
-int extractChar(wordinfo *dic[], int n, char** c, int dicsize, int head, int tail, unsigned char* louds){ //{{{
+int extractChar(wordinfo *dic[], int n, char** c, int dicsize, int head, int tail, unsigned char* louds, int* lo){ //{{{
     int i;
     int biteSize, start;
     int k=0;
-    int j, l;
+    int j, l, q;
     char tmp[N];
     char pre[N];
 
@@ -228,8 +229,10 @@ int extractChar(wordinfo *dic[], int n, char** c, int dicsize, int head, int tai
         pre[i] = '\0';
     }
 
-    j=0;
+    j=*lo;
     for(i=head; i<tail+1; i++){
+
+
         start = 0;
         biteSize = checkBite(dic[i]->word[0]);
         for(l=0; l<n; l++){
@@ -237,7 +240,6 @@ int extractChar(wordinfo *dic[], int n, char** c, int dicsize, int head, int tai
             biteSize = checkBite(dic[i]->word[start]);
         }
 
-        //strncpy(tmp, dic[i]->word+(start), sizeof(char)*biteSize);
 
         // tmpに単語のn文字目まで入れる
         strcpy(pre, tmp);
@@ -249,11 +251,15 @@ int extractChar(wordinfo *dic[], int n, char** c, int dicsize, int head, int tai
         if(dic[i]->word[start] == '\0'){
             continue;
         }
-        //もし重複していなかったらc[k]にこぴー
+        //もし重複していなかったらc[k]にコピー
         if(k==0 || strcmp(pre, tmp) != 0){
             c[k] = (char*)malloc(sizeof(char)*biteSize+1);
+            for(q=0;q<sizeof(char)*biteSize+1;q++)c[k][q]=0;
+
             strncpy(c[k], tmp+start, sizeof(char)*biteSize+1);
-            //c[k][biteSize+1] = '\0';
+            c[k][biteSize] = '\0';
+
+
             setBit(louds, j, 0);
             j++;
             // もしn+1文字めがあったら1を立てる
@@ -272,8 +278,11 @@ int extractChar(wordinfo *dic[], int n, char** c, int dicsize, int head, int tai
             }
         }
 
+
     }
-printf("k == %d\n", k);
+    printf("j == %d\n", j);
+    printf("k == %d\n", k);
+    *lo = j;
     return k;
 
 } //}}}
@@ -286,18 +295,43 @@ void freeExtracted(char **c, int size){ //{{{
 } //}}}
 
 
+// Loudsを作る
+// freeすること
+int makeLouds(wordinfo *dic[], char** c ,int dicsize, unsigned char* louds){ /* {{{ */
+    int i, k;
+    int a=0, b;
+    int lo=0;
+
+
+    for(k=0;k<LINE;k++){
+        louds[k] = 0;
+    }
+    for(i=0; i<50; i++){
+        b = extractChar(dic, i, c+a, dicsize, 0, 10, louds, &lo);
+        a = a+b;
+        if(b==0)break;
+    }
+    printf("lo  == %d\n",lo);
+    printf("lo/8== %d\n", lo/8);
+    printf("a   == %d\n", a);
+
+    for(k=0; k<10; k++){
+        show_signed_char(louds[k]);
+    }
+    printf("\n");
+
+    return a;
+} /*}}}*/
+
+
 int main(void){
     wordinfo *info[LINE];
     int dicsize;
     int a;
-    char *c[LINE];
-    unsigned char louds[LINE];
-    unsigned char louds2[LINE];
+    char *c[LINE*15];
+    unsigned char louds[LINE*3];
     int i;
     char k = 10;
-    for(i=0;i<LINE;i++){
-        louds[i] = 0;
-    }
 
 
 
@@ -307,26 +341,14 @@ int main(void){
         return -1;
     }
 
-    a = extractChar(info, 0, c, dicsize, 90, 100, louds);
-    for(i=0; i<10; i++){
-        show_signed_char(louds[i]);
-    }
-    printf("\n");
-    a += extractChar(info, 1, c+a, dicsize, 90, 100, louds2);
-    for(i=0; i<10; i++){
-        show_signed_char(louds2[i]);
-    }
-
-
-    for(i=0;i<50; i++){
+    a = makeLouds(info, c, dicsize, louds); 
+    printf("a = %d\n", a);
+    for(i=0;i<a+1; i++){
         printf("%d ", i);
     printf("hoge = %s \n", c[i]);
     }
     freeExtracted(c, a);
 
-
-
-    printf("hoge = %s ", c[5]);
 
 
     freeDic(info, dicsize);
