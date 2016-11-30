@@ -32,6 +32,19 @@ typedef struct {
     double cost;
 } wordinfo;
 
+int fgetline(char *buf, size_t size, FILE *stream){
+    int len;
+    if(fgets(buf, size, stream) == NULL) return -1;
+    len = strlen(buf);
+    if(len == 0) return len;
+    if(buf[len-1] == '\n'){
+        buf[len-1] = '\0';
+        return len-1;
+    } else {
+        return len;
+    }
+}
+
 // 辞書を読み込む
 int readDic(char* filename, wordinfo* info[]){ // {{{
     FILE *fp;
@@ -227,7 +240,6 @@ int getIndexNum(unsigned char* louds, int n, int loudsSize){/* {{{ */
         if(zeroNum>=n)break;
     }
 
-        printf("zero = %d", zeroNum);
     return i;
 
 }/*}}}*/
@@ -302,7 +314,7 @@ int getN(char* word, int n, char* ret){ /*{{{*/
 // 辞書ファイルから重複がないようにn文字目をとってくる
 // ついでにlouds作る
 // 必ずfreeExtractedすること
-int extractChar(wordinfo *dic[], int n, char** c, int dicsize, int head, int tail, unsigned char* louds, int* lo){ //{{{
+int extractChar(wordinfo *dic[], int n, char** c, int dicsize, int head, int tail, unsigned char* louds, int* lo, int* d){ //{{{
     int i;
     int biteSize, start;
     int k=0;
@@ -318,7 +330,8 @@ int extractChar(wordinfo *dic[], int n, char** c, int dicsize, int head, int tai
     }
 
     j=*lo;
-    for(i=head; i<tail+1; i++){
+    //辞書の指定された頭から終わりまでたどる
+    for(i=head; i<tail; i++){
 
 
         start = 0;
@@ -335,15 +348,14 @@ int extractChar(wordinfo *dic[], int n, char** c, int dicsize, int head, int tai
         tmp[start+biteSize] = '\0';
 
 
+
         //もしwordの長さがn以下だったら次へ
         if(dic[i]->word[start] == '\0'){
             continue;
         }
 
-printf("pre = %s  tmp = %s\n", pre, tmp);
         getN(dic[i]->word, n+2, tmpNext);
-printf("preNext = %s tmpNext = %s\n", preNext, tmpNext);
-        //もし重複していなかったらc[k]にコピー
+        //もし重複していなかったらc[k]に現在の文字をコピー
         if(k==0 || strcmp(pre, tmp) != 0){
 
             //c[k]を初期化する
@@ -356,38 +368,35 @@ printf("preNext = %s tmpNext = %s\n", preNext, tmpNext);
 
 
             setBit(louds, j, 0);
-            printf("set(%d, 0) ",j);
             j++;
             // もしn+1文字めがあったら1を立てる
             if(dic[i]->word[start+biteSize] != 0){
-                if(strcmp(tmpNext, preNext)!=0){
+                //if(strcmp(tmpNext, preNext)!=0){
                     setBit(louds, j, 1);
-                    printf("set(%d, 1)",j);
                     j++;
-                }
+                //}
                 strcpy(preNext, tmpNext);
+            }else{
+                //なければd[k]にiを入れる
+                d[k] = i;
             }
             k++;
-            printf("\n");
         }else{
             // もしn+1文字目があったら1を立てる
             if(dic[i]->word[start+biteSize] != 0){
                 // もし次の文字も一緒だったらだったら立てる
                 if(strcmp(tmpNext, preNext)!=0){
                     setBit(louds, j, 1);
-                    printf("tigaukara set(%d, 1)\n",j);
                     j++;
                 }
             }
+                
         }
 
         strcpy(preNext, tmpNext);
-        printf("\n");
 
 
     }
-    printf("j == %d\n", j);
-    //printf("k == %d\n", k);
     *lo = j;
     return k;
 
@@ -403,7 +412,7 @@ void freeExtracted(char **c, int size){ //{{{
 
 // Loudsを作る
 // freeすること
-int makeLouds(wordinfo *dic[], char** c ,int dicsize, unsigned char* louds, int* lnum){ /* {{{ */
+int makeLouds(wordinfo *dic[], char** c ,int dicsize, unsigned char* louds, int* lnum, int* d){ /* {{{ */
     int i, k;
     int a=0, b;
     int lo=0;
@@ -411,19 +420,13 @@ int makeLouds(wordinfo *dic[], char** c ,int dicsize, unsigned char* louds, int*
 
 
     for(i=0; i<50; i++){
-        b = extractChar(dic, i, c+a, dicsize, 0, 100, louds, &lo);
+        b = extractChar(dic, i, c+a, dicsize, 0, dicsize, louds, &lo, d+a);
         lnum[i] = b;
         a += b;
 
         if(b==0)break;
     }
 
-    for(k=0; k<10; k++){
-
-        printf("%d ",k);
-        show_signed_char(louds[k]);
-    }
-    printf("\n");
 
     return a;
 } /*}}}*/
@@ -431,9 +434,9 @@ int makeLouds(wordinfo *dic[], char** c ,int dicsize, unsigned char* louds, int*
 
 
 // 子をたどる
-void searchLouds(char ** c, int csize, unsigned char* louds, int* lnum, char *word){
+int searchLouds(char ** c, int csize, unsigned char* louds, int* lnum, char *word, int* ans){/* {{{*/
     char first[3], Nchar[3];
-    int i, index, node, numChild, k=0;
+    int i, index, node, numChild, k=0, l;
     int ansNum, oneNum;
 
     getN(word, 1, first);
@@ -446,34 +449,26 @@ void searchLouds(char ** c, int csize, unsigned char* louds, int* lnum, char *wo
         }
     }
 
-
-    printf("\n\n");
     //この時点でc[i]が一文字め
-    printf("hogehogec[%d] = %s\n", i, c[i]);
 
     ansNum = i;
+    ans[0] = i;
 
 
     for(i=0; i<N; i++){
-        index = getIndexNum(louds, ansNum+1, LINE*3);
-        printf("index %d\n", index);
+        strcpy(Nchar, "");
         
-        printf("%d ", index/8);
-        show_signed_char(louds[index/8]-1);
-        show_signed_char(louds[index/8]);
-        show_signed_char(louds[index/8]+1);
-
+        index = getIndexNum(louds, ansNum+1, LINE*3);
+        
         // 子ノードの個数
         numChild = checkChildren(louds, index);
-        printf("KODOMONOKAZU %d\n", numChild);
 
         oneNum = getNumofOne(louds, index);
 
         node = oneNum + lnum[0];
         getN(word, i+2, Nchar);
-        printf("NODE %d\n", node);
+
         for(k=0; k<numChild; k++){
-            printf("node%d+%d %s \n",node, k, c[node+k]);
             if(strcmp(c[node+k], Nchar)==0){
                 break;
             }
@@ -481,22 +476,150 @@ void searchLouds(char ** c, int csize, unsigned char* louds, int* lnum, char *wo
         if(k==numChild)break;
         ansNum = node + k;
 
-        printf("yattane!!!! node=%d c[node]=%s\n", ansNum, c[ansNum]);
-        printf("---------\nansNum=%d index=%d\n----------\n", ansNum, index);
 
+        ans[i+1] = ansNum;
         
-        printf("\n");
+
+    }
+    return i+1;
+
+}/*}}}*/
+
+void printWordInfo(wordinfo info){ /* {{{*/
+    printf("%s\t%s\t%s\t%s\t\n", info.word, info.yomi, info.kihon, info.hinshi);
+}/*}}}*/
+void minCostMatch(char *buf, int len, int dicsize, wordinfo* info[], char** c, int csize, unsigned char* louds, int *lnum, int * ansList, int* d){/* {{{*/
+    double minCost[1000];
+    int minWordNum[1000];
+    char tmpWord[1000];
+    double wordCost[1000][50];
+    int lattice[1000][50];//[文字位置][単語数]
+    int wordLen[1000][50];//lattice[n][i]の単語の長さ
+    int latticeNum[1000];//lattice[n]に何個単語が入ってるか
+    int i, k, hit, j=0, l;
+    int place[1000];
+    int p=0, kp=0;
+    double tmpCost;
+    int revans[1000];
+    int ans[1000];
+    int ansNum = 0;
+    int owari[100];
+    for(i=0;i<1000;i++)latticeNum[i] = 0;
+
+    //初期化
+    //ラティスを作る
+    //printf("len =1 %d ", len);
+    for(i=0; i<len; i++){
+        if(checkBite(buf[i]) == 2)i++;
+
+        strncpy(tmpWord, buf+i-1, len-i+1);
+        tmpWord[len-i+1] = '\0';
+        ansNum = searchLouds(c, csize, louds, lnum, tmpWord, ansList);
+        l=0;
+        for(k=0;k<ansNum;k++){
+            if(d[ansList[k]]==-1)continue;
+            lattice[p+k][latticeNum[p+k]] = d[ansList[k]];
+            wordCost[p+k][latticeNum[p+k]] = info[d[ansList[k]]]->cost;
+            wordLen[p+k][latticeNum[p+k]] = k+1;
+            latticeNum[p+k]++;
+            
+            
+        }
+        
+       fprintf(stderr, "ok\n"); 
+        p++;
 
     }
 
+    /*
+    for(i=0; i<len; i++){
+        if(checkBite(buf[i]) == 2){
+            i++;
+        }
+        place[p] = i;
+        j=0;
+        kp=0;
+        for(k=0; k<=i; k++){
+            //kからiまでの単語があるかどうか調べる
+            strncpy(tmpWord, buf+k, i-k+1);
+            tmpWord[i-k+1] = '\0';
+            hit = binaryLookup(info, tmpWord, dicsize);
 
-    printf("%d %d %d\n", lnum[0], lnum[1], lnum[2]);
+            //ラティスとか初期化
+            lattice[p][j] = -1;
+            //wordLen[p][j] = 1;
+            //あったらその辞書番号とコストを保存
+            if(hit != -1){
+                lattice[p][j] = hit;
+                wordCost[p][j] = info[hit]->cost;
+                wordLen[p][j] = p-kp+1;
+                j++;
+                //printf("lettice %d %d = ", p, j-1);
+                //printWordInfo(*info[hit]);
+            }
+
+            if(checkBite(buf[i]) == 2){
+                k++;
+            }
+            kp++;
+        }
+        latticeNum[p] = j;
+        p++;
+    }
+*/
+    //ここまでで初期化完了
+    //最小を見つける
+    for(i=0; i<=p; i++){
+        minCost[i] = INT_MAX;
+        for(k=0; k<latticeNum[i]; k++){
+            tmpCost = wordCost[i][k];
+            if(i-wordLen[i][k]>=0)tmpCost += minCost[i-wordLen[i][k]];
+            if(tmpCost < minCost[i] || minCost[i] < 0){
+                minCost[i] = tmpCost;
+                minWordNum[i] = k;
+            }
+        }
+    }
+    
+    //バックトラック
+    i = p-1;
+    k = 0;
+    while(1){
+        revans[k] = lattice[i][minWordNum[i]];
+        if(revans[k] >= 0){
+        //    printWordInfo(*info[revans[k]]);
+        //printf("i = %d\n", i);
+        //printf("k = %d\n", k);
+        //printf("revans[k] = %d\n", revans[k]);
+        //printf("len = %d\n", wordLen[i][minWordNum[i]]);
+        //printf("minWordNum[i] = %d\n", minWordNum[i]);
+
+        //printf("lattice[i][0] = %d\n", lattice[i][0]);
+        //printf("lattice[i][1] = %d\n", lattice[i][1]);
+
+        //printf("lattice[i+2][0] = %d\n", lattice[i-1][0]);
+        //printf("lattice[i+2][1] = %d\n", lattice[i-1][0]);
+        
+        i -= wordLen[i][minWordNum[i]];
+        }else{
+            i -= 1;
+        }
+        if(i<0)break;
+        k++;
+    }
+
+    for(i=0; i<=k; i++){
+        ans[i] = revans[k-i];
+        if(ans[i] >= 0){
+            printWordInfo(*info[ans[i]]);
+        }else{
+            printf("undefined\n");
+        }
+    }
+}/*}}}*/
 
 
-}
-
-
-int main(void){
+int main(int argc, char* argv[]){
     wordinfo *info[LINE];
     int dicsize;
     int a;
@@ -504,35 +627,36 @@ int main(void){
     int lnum[50];
     char *c[LINE*15];
     unsigned char louds[LINE*3];
-    int i;
-    char k = 10;
+    int d[LINE*3];
+    //int ans[N];
+    int i, len;
+    int ansList[N];
+    char buf[100];
 
-    char word[100];
-
-    fgets(word, 100, stdin);
-    
 
     if((dicsize=readDic(FILENAME, info)) < 0){
         printf("cannot read dict");
         return -1;
     }
 
-    a = makeLouds(info, c, dicsize, louds, lnum); 
-    //printf("a = %d\n", a);
-    //printf("lnum = %d\n", lnum[0]);
-    for(i=0;i<a+1; i++){
-       printf("%d ", i);
-       printf("hoge = %s \n", c[i]);
+    for(i=0;i<LINE*3;i++)d[i]=-1;
+
+    a = makeLouds(info, c, dicsize, louds, lnum, d); 
+
+    while(fgetline(buf, sizeof(buf), stdin) != -1){
+        len = strlen(buf);
+        minCostMatch(buf, len, dicsize, info, c, a, louds, lnum, ansList, d);
     }
+    //ansnum = searchLouds(c, a, louds, lnum, word, ans);
+    
 
+    //for (i=0; i<ansnum; i++){
+    //    printf("%s\n", info[d[ans[i]]]->word);
+    //}
 
-    searchLouds(c, a, louds, lnum, word);
 
 
     freeExtracted(c, a);
-
-
-
     freeDic(info, dicsize);
     
     return 0;
