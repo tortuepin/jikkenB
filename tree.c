@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <time.h>
 
 
 #define MASK0 255
@@ -436,18 +437,45 @@ int makeLouds(wordinfo *dic[], char** c ,int dicsize, unsigned char* louds, int*
 // 子をたどる
 int searchLouds(char ** c, int csize, unsigned char* louds, int* lnum, char *word, int* ans){/* {{{*/
     char first[3], Nchar[3];
-    int i, index, node, numChild, k=0, l;
+    int i, index, node, numChild, k=0, l, bini, binhead, bintail, binresult;
     int ansNum, oneNum;
+    clock_t start, end;
+
 
     getN(word, 1, first);
 
 
     //一文字目をcから探す
+    start = clock();
+
     for(i=0; i<csize; i++){
         if(strcmp(c[i], first)==0){
             break;
         }
     }
+    end = clock();
+    printf("1Mozime %lu\n", end-start);
+
+    //bini = (csize-1)/2;
+    //binhead = 0;
+    //bintail = csize-1;
+    //while(1){
+    //    binresult = strcmp(c[bini], first);
+    //    if(binhead > bintail){
+    //        break;
+    //    }
+    //    if(binresult == 0){
+    //        break;
+    //    }else if(binresult > 0){
+    //        bintail = bini-1;
+    //    }else if(binresult < 0){
+    //        binhead = bini+1;
+    //    }
+    //    bini = (binhead+bintail)/2;
+    //}
+
+    //i = bini;
+
 
     //この時点でc[i]が一文字め
 
@@ -457,13 +485,19 @@ int searchLouds(char ** c, int csize, unsigned char* louds, int* lnum, char *wor
 
     for(i=0; i<N; i++){
         strcpy(Nchar, "");
-        
+    start = clock(); 
         index = getIndexNum(louds, ansNum+1, LINE*3);
         
+    end = clock();
+    printf("1getIndex %lu\n", end-start);
         // 子ノードの個数
+
         numChild = checkChildren(louds, index);
 
+    start = clock();
         oneNum = getNumofOne(louds, index);
+    end = clock();
+    printf("getNumofOne %lu\n", end-start);
 
         node = oneNum + lnum[0];
         getN(word, i+2, Nchar);
@@ -517,6 +551,7 @@ void minCostMatch(char *buf, int len, int dicsize, wordinfo* info[], char** c, i
         ansNum = searchLouds(c, csize, louds, lnum, tmpWord, ansList);
         l=0;
         for(k=0;k<ansNum;k++){
+            lattice[p+k][latticeNum[p+k]] = -1;
             if(d[ansList[k]]==-1)continue;
             lattice[p+k][latticeNum[p+k]] = d[ansList[k]];
             wordCost[p+k][latticeNum[p+k]] = info[d[ansList[k]]]->cost;
@@ -526,7 +561,6 @@ void minCostMatch(char *buf, int len, int dicsize, wordinfo* info[], char** c, i
             
         }
         
-       fprintf(stderr, "ok\n"); 
         p++;
 
     }
@@ -585,7 +619,9 @@ void minCostMatch(char *buf, int len, int dicsize, wordinfo* info[], char** c, i
     i = p-1;
     k = 0;
     while(1){
+        //fprintf(stderr, "i==%d\n", i);
         revans[k] = lattice[i][minWordNum[i]];
+        //fprintf(stderr, "revans[%d] == %d\n", k, revans[k]);
         if(revans[k] >= 0){
         //    printWordInfo(*info[revans[k]]);
         //printf("i = %d\n", i);
@@ -600,10 +636,13 @@ void minCostMatch(char *buf, int len, int dicsize, wordinfo* info[], char** c, i
         //printf("lattice[i+2][0] = %d\n", lattice[i-1][0]);
         //printf("lattice[i+2][1] = %d\n", lattice[i-1][0]);
         
+        //fprintf(stderr,"i-wordLen[%d][minWordNum[%d]](%d)\n", i, i,wordLen[i][minWordNum[i]]);
         i -= wordLen[i][minWordNum[i]];
+        
         }else{
             i -= 1;
         }
+
         if(i<0)break;
         k++;
     }
@@ -642,10 +681,12 @@ int main(int argc, char* argv[]){
     for(i=0;i<LINE*3;i++)d[i]=-1;
 
     a = makeLouds(info, c, dicsize, louds, lnum, d); 
-
+i=0;
     while(fgetline(buf, sizeof(buf), stdin) != -1){
+        
         len = strlen(buf);
         minCostMatch(buf, len, dicsize, info, c, a, louds, lnum, ansList, d);
+        i++;
     }
     //ansnum = searchLouds(c, a, louds, lnum, word, ans);
     
